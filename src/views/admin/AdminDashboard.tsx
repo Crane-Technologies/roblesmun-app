@@ -6,6 +6,7 @@ import {
   FaHandshake,
   FaGavel,
   FaClipboardList,
+  FaUserShield,
 } from "react-icons/fa";
 
 const AdminDashboard: FC = () => {
@@ -34,6 +35,11 @@ const AdminDashboard: FC = () => {
       title: "Inscripciones",
       icon: <FaClipboardList />,
       path: "/admin/registrations",
+    },
+    {
+      title: "Usuarios",
+      icon: <FaUserShield />,
+      path: "/admin/users",
     },
   ];
 
