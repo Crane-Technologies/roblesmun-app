@@ -15,6 +15,9 @@ import { FirestoreService } from "../../firebase/firestore";
 import type { Committee } from "../../interfaces/Committee";
 import Loader from "../../components/Loader";
 import XButton from "../../components/XButton";
+import { AssignmentsPDFGenerator } from "../../components/AssignmentsPDFGenerator";
+import { EmailService } from "../../providers/EmailService";
+import { uploadFile } from "../../supabase/storage";
 
 interface CommitteeWithId extends Committee {
   id: string;
@@ -36,6 +39,10 @@ const SeatManagement: FC = () => {
     useState<CommitteeWithId | null>(null);
   const [showSeatsModal, setShowSeatsModal] = useState<boolean>(false);
   const [isSaving, setIsSaving] = useState<boolean>(false);
+  const [selectedSeats, setSelectedSeats] = useState<number[]>([]);
+  const [recipientEmail, setRecipientEmail] = useState<string>("");
+  const [recipientName, setRecipientName] = useState<string>("");
+  const [assignmentNotes, setAssignmentNotes] = useState<string>("");
 
   const fetchCommittees = async () => {
     setIsLoading(true);
@@ -106,6 +113,147 @@ const SeatManagement: FC = () => {
   const closeSeatsModal = () => {
     setSelectedCommittee(null);
     setShowSeatsModal(false);
+    setSelectedSeats([]);
+    setRecipientEmail("");
+    setRecipientName("");
+    setAssignmentNotes("");
+  };
+
+  // Toggle seat selection for assignment
+  const handleToggleSeatSelection = (seatIndex: number) => {
+    setSelectedSeats((prev) =>
+      prev.includes(seatIndex)
+        ? prev.filter((i) => i !== seatIndex)
+        : [...prev, seatIndex]
+    );
+  };
+
+  // Select all available seats
+  const handleSelectAllAvailable = () => {
+    if (!selectedCommittee) return;
+    const availableIndexes = selectedCommittee.seatsList
+      .map((seat, index) => (seat.available ? index : -1))
+      .filter((i) => i !== -1);
+    setSelectedSeats(availableIndexes);
+  };
+
+  // Clear selection
+  const handleClearSelection = () => {
+    setSelectedSeats([]);
+  };
+
+  // Assign selected seats (mark as occupied and send PDF)
+  const handleAssignSelectedSeats = async () => {
+    if (!selectedCommittee || !selectedCommittee.id) return;
+    if (selectedSeats.length === 0) {
+      alert("Debes seleccionar al menos un cupo");
+      return;
+    }
+    if (!recipientEmail.trim()) {
+      alert("Debes ingresar un correo electrónico");
+      return;
+    }
+    if (!recipientName.trim()) {
+      alert("Debes ingresar el nombre del destinatario");
+      return;
+    }
+
+    const confirmMessage = `¿Confirmas asignar ${selectedSeats.length} cupo(s) a ${recipientName} (${recipientEmail})?`;
+    if (!window.confirm(confirmMessage)) return;
+
+    setIsSaving(true);
+    try {
+      // Get selected seats names
+      const assignedSeatsNames = selectedSeats.map(
+        (index) => selectedCommittee.seatsList[index].name
+      );
+
+      // Create mock registration for PDF
+      const mockRegistration = {
+        id: `manual-${Date.now()}`,
+        userInstitution: recipientName,
+        userFirstName: recipientName.split(" ")[0] || recipientName,
+        userLastName: recipientName.split(" ").slice(1).join(" ") || "",
+        userEmail: recipientEmail,
+        userIsFaculty: false,
+        seats: selectedSeats.length,
+        seatsRequested: assignedSeatsNames,
+        transactionId: `manual-${selectedCommittee.name}-${Date.now()}`,
+        assignmentPdfUrl: "",
+      };
+
+      // Generate PDF
+      console.log("📄 Generando PDF de asignación...");
+      const pdfBlob = AssignmentsPDFGenerator.getAssignmentsPDFBlob(
+        mockRegistration as unknown as Parameters<
+          typeof AssignmentsPDFGenerator.getAssignmentsPDFBlob
+        >[0],
+        assignedSeatsNames
+      );
+
+      // Upload PDF to Supabase
+      console.log("☁️ Subiendo PDF a Supabase...");
+      const pdfFileName = `assignments/${selectedCommittee.name.replace(
+        /[^a-zA-Z0-9]/g,
+        "-"
+      )}-${Date.now()}.pdf`;
+      const pdfFile = new File([pdfBlob], pdfFileName, {
+        type: "application/pdf",
+      });
+      const pdfUrl = await uploadFile(pdfFile, "assignments");
+      console.log("✅ PDF subido:", pdfUrl);
+
+      mockRegistration.assignmentPdfUrl = pdfUrl;
+
+      // Send email
+      console.log("📧 Enviando correo...");
+      await EmailService.sendAssignmentPDF(
+        mockRegistration as unknown as Parameters<
+          typeof EmailService.sendAssignmentPDF
+        >[0],
+        assignedSeatsNames,
+        assignmentNotes || `Asignación de cupos para ${selectedCommittee.name}`
+      );
+      console.log("✅ Correo enviado");
+
+      // Update seats in Firestore
+      const updatedSeatsList = selectedCommittee.seatsList.map((seat, index) =>
+        selectedSeats.includes(index) ? { ...seat, available: false } : seat
+      );
+
+      await FirestoreService.update("committees", selectedCommittee.id, {
+        seatsList: updatedSeatsList,
+      });
+
+      // Update local state
+      const updatedCommittee = {
+        ...selectedCommittee,
+        seatsList: updatedSeatsList,
+      };
+      setSelectedCommittee(updatedCommittee);
+      setCommittees((prev) =>
+        prev.map((c) => (c.id === selectedCommittee.id ? updatedCommittee : c))
+      );
+
+      // Reset form
+      setSelectedSeats([]);
+      setRecipientEmail("");
+      setRecipientName("");
+      setAssignmentNotes("");
+
+      alert(
+        `✅ Asignación completada:\n- ${selectedSeats.length} cupo(s) asignados\n- PDF generado y enviado a ${recipientEmail}`
+      );
+    } catch (error) {
+      console.error("Error al asignar cupos:", error);
+      alert(
+        `Error al procesar la asignación: ${
+          error instanceof Error ? error.message : "Error desconocido"
+        }`
+      );
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   // Toggle seat availability
@@ -414,6 +562,79 @@ const SeatManagement: FC = () => {
                   <XButton />
                 </button>
               </div>
+              {/* Assignment form */}
+              <div className="p-6 border-b border-gray-700">
+                <h3 className="text-lg font-montserrat-bold text-blue-400 mb-4">
+                  Asignar Cupos Seleccionados ({selectedSeats.length})
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Nombre del destinatario *
+                    </label>
+                    <input
+                      type="text"
+                      value={recipientName}
+                      onChange={(e) => setRecipientName(e.target.value)}
+                      placeholder="Ej: Juan Pérez"
+                      className="w-full px-4 py-2 bg-glass border border-gray-600 rounded-lg text-[#f0f0f0] focus:border-[#d53137] outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Correo electrónico *
+                    </label>
+                    <input
+                      type="email"
+                      value={recipientEmail}
+                      onChange={(e) => setRecipientEmail(e.target.value)}
+                      placeholder="Ej: correo@ejemplo.com"
+                      className="w-full px-4 py-2 bg-glass border border-gray-600 rounded-lg text-[#f0f0f0] focus:border-[#d53137] outline-none"
+                    />
+                  </div>
+                </div>
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Notas adicionales (opcional)
+                  </label>
+                  <textarea
+                    value={assignmentNotes}
+                    onChange={(e) => setAssignmentNotes(e.target.value)}
+                    placeholder="Información adicional sobre la asignación..."
+                    rows={2}
+                    className="w-full px-4 py-2 bg-glass border border-gray-600 rounded-lg text-[#f0f0f0] focus:border-[#d53137] outline-none resize-none"
+                  />
+                </div>
+                <div className="flex gap-3">
+                  <button
+                    onClick={handleSelectAllAvailable}
+                    disabled={isSaving}
+                    className="cursor-pointer px-4 py-2 bg-glass text-white rounded-lg transition-colors text-sm font-medium flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <FaCheckCircle />
+                    Seleccionar Todos Disponibles
+                  </button>
+                  <button
+                    onClick={handleClearSelection}
+                    disabled={isSaving}
+                    className="cursor-pointer px-4 py-2 bg-glass text-white rounded-lg transition-colors text-sm font-medium flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <FaTimesCircle />
+                    Limpiar Selección
+                  </button>
+                  <button
+                    onClick={handleAssignSelectedSeats}
+                    disabled={isSaving || selectedSeats.length === 0}
+                    className="cursor-pointer flex-1 px-4 py-2 bg-[#d53137] hover:bg-[#b52a2f] text-white rounded-lg transition-colors text-sm font-medium flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <FaCheckCircle />
+                    {isSaving
+                      ? "Procesando..."
+                      : `Asignar ${selectedSeats.length} Cupo(s)`}
+                  </button>
+                </div>
+              </div>
+
               {/* Bulk actions */}
               <div className="p-6 border-b border-gray-700 flex gap-3 justify-center">
                 <button
@@ -443,12 +664,24 @@ const SeatManagement: FC = () => {
                       <div
                         key={index}
                         className={`flex items-center justify-between p-4 rounded-lg border transition-colors ${
-                          seat.available
+                          selectedSeats.includes(index)
+                            ? "bg-blue-900/30 border-blue-500"
+                            : seat.available
                             ? "bg-green-900/20 border-green-600"
                             : "bg-red-900/20 border-red-600"
                         }`}
                       >
                         <div className="flex items-center gap-3">
+                          {/* Checkbox for selection */}
+                          {seat.available && (
+                            <input
+                              type="checkbox"
+                              checked={selectedSeats.includes(index)}
+                              onChange={() => handleToggleSeatSelection(index)}
+                              className="w-5 h-5 cursor-pointer accent-blue-500"
+                              aria-label={`Seleccionar ${seat.name}`}
+                            />
+                          )}
                           <div
                             className={`w-3 h-3 rounded-full ${
                               seat.available ? "bg-green-400" : "bg-red-400"
@@ -457,6 +690,11 @@ const SeatManagement: FC = () => {
                           <span className="font-medium text-white">
                             {seat.name}
                           </span>
+                          {selectedSeats.includes(index) && (
+                            <span className="text-xs bg-blue-600 text-white px-2 py-1 rounded">
+                              Seleccionado
+                            </span>
+                          )}
                         </div>
 
                         <button
@@ -464,7 +702,7 @@ const SeatManagement: FC = () => {
                           disabled={isSaving}
                           className={`cursor-pointer px-4 py-2 rounded-lg transition-colors text-sm font-medium flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed ${
                             seat.available
-                              ? "bg-[#d53137] hover:bg-[#b52a2f] text-white"
+                              ? "bg-gray-600 hover:bg-gray-700 text-white"
                               : "bg-green-600 hover:bg-green-700 text-white"
                           }`}
                         >

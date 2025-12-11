@@ -435,4 +435,54 @@ export class SupabaseStorage {
       throw error;
     }
   }
+
+  // Generic file upload method
+  static async uploadFile(
+    file: File,
+    folder: string = "assignments"
+  ): Promise<string> {
+    try {
+      const fileExt = file.name.split(".").pop();
+      const fileName = `${Date.now()}-${Math.random()
+        .toString(36)
+        .substring(2)}.${fileExt}`;
+      const filePath = `${folder}/${fileName}`;
+
+      console.log("📄 Subiendo archivo:", filePath);
+
+      // Determinar bucket según el tipo de archivo o folder
+      let bucketName = "roblesmun-images"; // Default para imágenes
+
+      // Si es un PDF o está en folder de assignments, usar bucket registrations
+      if (file.type === "application/pdf" || folder === "assignments") {
+        bucketName = "registrations";
+      }
+
+      console.log("📦 Bucket seleccionado:", bucketName);
+
+      const { error } = await supabase.storage
+        .from(bucketName)
+        .upload(filePath, file, {
+          cacheControl: "3600",
+          upsert: true,
+        });
+
+      if (error) {
+        throw new Error(`Error uploading file: ${error.message}`);
+      }
+
+      const { data: urlData } = supabase.storage
+        .from(bucketName)
+        .getPublicUrl(filePath);
+
+      console.log("✅ Archivo subido:", urlData.publicUrl);
+      return urlData.publicUrl;
+    } catch (error) {
+      console.error("Error in uploadFile:", error);
+      throw error;
+    }
+  }
 }
+
+// Export helper function
+export const uploadFile = SupabaseStorage.uploadFile;
