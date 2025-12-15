@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import XButton from "./XButton";
 import type { Committee } from "../interfaces/Committee";
+import { FaCheck, FaTimes } from "react-icons/fa";
 
 const CommitteeModal: FC<{
   committee: Committee;
@@ -17,7 +18,7 @@ const CommitteeModal: FC<{
       transition={{ duration: 0.2 }}
     >
       <button
-        className="absolute top-4 left-4 z-10"
+        className="absolute top-4 left-4 z-10 cursor-pointer"
         aria-label="Cerrar comité"
         onClick={onClose}
       >
@@ -49,6 +50,16 @@ const CommitteeModal: FC<{
             <span className="font-montserrat-bold">Cupos:</span>{" "}
             {committee.seats}
           </p>
+
+          {committee.seatsList && (
+            <p className="text-sm md:text-base">
+              <span className="font-montserrat-bold">Disponibles:</span>{" "}
+              <span className="text-green-400">
+                {committee.seatsList.filter((seat) => seat.available).length}
+              </span>{" "}
+              / {committee.seats}
+            </p>
+          )}
         </div>
 
         {committee.description && (
@@ -98,7 +109,7 @@ const CommitteeModal: FC<{
             <h3 className="text-lg font-montserrat-bold mb-3">
               Basamentos jurídicos
             </h3>
-            {committee.legalFramework ? (
+            {committee.legalFramework && committee.legalFramework.length > 0 ? (
               <ul className="list-disc list-inside">
                 {committee.legalFramework.map((link, index) => (
                   <li key={index}>
@@ -117,6 +128,52 @@ const CommitteeModal: FC<{
               <p className="text-sm text-gray-300">¡Próximamente disponible!</p>
             )}
           </div>
+
+          {/* Lista de Cupos */}
+          {committee.seatsList && committee.seatsList.length > 0 && (
+            <div>
+              <h3 className="text-lg font-montserrat-bold mb-3">
+                Lista de Cupos
+              </h3>
+              <div className="max-h-64 overflow-y-auto bg-glass rounded-lg p-3 space-y-2">
+                {committee.seatsList.map((seat, index) => (
+                  <div
+                    key={index}
+                    className={`flex items-center justify-between p-2 rounded text-sm transition-colors ${
+                      seat.available
+                        ? "bg-green-900/20 hover:bg-green-900/30 border border-green-700/30"
+                        : "bg-red-900/20 hover:bg-red-900/30 border border-red-700/30"
+                    }`}
+                  >
+                    <span
+                      className={`font-montserrat-light ${
+                        seat.available ? "text-green-300" : "text-red-300"
+                      }`}
+                    >
+                      {seat.name}
+                    </span>
+                    <div className="flex items-center gap-2">
+                      {seat.available ? (
+                        <>
+                          <FaCheck className="text-green-400" />
+                          <span className="text-xs text-green-400 font-montserrat-bold">
+                            Disponible
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          <FaTimes className="text-red-400" />
+                          <span className="text-xs text-red-400 font-montserrat-bold">
+                            Ocupado
+                          </span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </motion.div>
