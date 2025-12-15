@@ -31,6 +31,7 @@ import Loader from "../../components/Loader";
 import { FirestoreService } from "../../firebase/firestore";
 import { SupabaseStorage } from "../../supabase/storage";
 import { Link } from "react-router-dom";
+import { useRef } from "react";
 
 type SortOption =
   | "newest"
@@ -84,6 +85,8 @@ const CommitteesManagement: FC = () => {
     legalFramework: [],
     president: "",
   });
+
+  const formRef = useRef<HTMLDivElement>(null);
 
   const fetchCommittees = async () => {
     setIsLoading(true);
@@ -341,6 +344,9 @@ const CommitteesManagement: FC = () => {
     setImagePreview(committee.img);
     setEditingId(committee.id || null);
     setShowForm(true);
+    setTimeout(() => {
+      formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 100); // Espera breve para asegurar que el form esté visible
   };
 
   const handleDelete = async (id: string) => {
@@ -401,7 +407,7 @@ const CommitteesManagement: FC = () => {
           <h1 className="text-4xl font-montserrat-bold">Gestión de Comités</h1>
           <Link
             to="/admin"
-            className="px-6 py-2 my-4 bg-glass border border-gray-600 rounded-lg text-[#f0f0f0] hover:border-[#d53137] hover:bg-gray-700 transition-colors flex items-center gap-2 font-medium"
+            className="px-6 py-2 my-4 bg-glass bg-glass rounded-lg text-[#f0f0f0] hover:border-[#d53137] hover:bg-gray-700 transition-colors flex items-center gap-2 font-medium"
           >
             <FaHome size={16} />
             Panel Admin
@@ -415,7 +421,7 @@ const CommitteesManagement: FC = () => {
             placeholder="Buscar comités..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="px-4 py-2 bg-glass border border-gray-600 rounded-lg text-[#f0f0f0] focus:border-[#d53137] outline-none"
+            className="px-4 py-2 bg-glass bg-glass rounded-lg text-[#f0f0f0] focus:border-[#d53137] outline-none"
           />
           <button
             onClick={() => setShowForm(!showForm)}
@@ -438,7 +444,7 @@ const CommitteesManagement: FC = () => {
               <button
                 key={option.value}
                 onClick={() => handleSortChange(option.value)}
-                className={`px-4 py-2 cursor-pointer rounded-lg flex items-center gap-2 text-sm transition-colors ${
+                className={`px-4 py-2 rounded-lg flex items-center gap-2 text-sm transition-colors cursor-pointer ${
                   sortOption === option.value
                     ? "bg-[#d53137] text-white"
                     : "bg-glass text-gray-300 hover:bg-gray-700"
@@ -454,7 +460,10 @@ const CommitteesManagement: FC = () => {
 
       {/* Form */}
       {showForm && (
-        <div className="bg-glass p-6 rounded-lg mb-8 max-h-[80vh] overflow-y-auto">
+        <div
+          ref={formRef}
+          className="bg-glass p-6 rounded-lg mb-8 max-h-[80vh] overflow-y-auto"
+        >
           <h2 className="text-2xl font-montserrat-bold mb-6">
             {editingId ? "Editar Comité" : "Nuevo Comité"}
           </h2>
@@ -473,7 +482,7 @@ const CommitteesManagement: FC = () => {
                     value={formData.name}
                     onChange={handleInputChange}
                     required
-                    className="w-full p-3 bg-[#101010] border border-gray-600 rounded-lg text-[#f0f0f0] focus:border-[#d53137] outline-none"
+                    className="w-full p-3 bg-glass rounded-lg text-[#f0f0f0] focus:border-[#d53137] outline-none"
                     placeholder="Ej: Consejo de Seguridad de la ONU"
                   />
                 </div>
@@ -488,7 +497,7 @@ const CommitteesManagement: FC = () => {
                     value={formData.topic}
                     onChange={handleInputChange}
                     required
-                    className="w-full p-3 bg-[#101010] border border-gray-600 rounded-lg text-[#f0f0f0] focus:border-[#d53137] outline-none"
+                    className="w-full p-3 bg-glass rounded-lg text-[#f0f0f0] focus:border-[#d53137] outline-none"
                     placeholder="Ej: Crisis en Medio Oriente"
                   />
                 </div>
@@ -502,7 +511,7 @@ const CommitteesManagement: FC = () => {
                     name="president"
                     value={formData.president}
                     onChange={handleInputChange}
-                    className="w-full p-3 bg-[#101010] border border-gray-600 rounded-lg text-[#f0f0f0] focus:border-[#d53137] outline-none"
+                    className="w-full p-3 bg-glass rounded-lg text-[#f0f0f0] focus:border-[#d53137] outline-none"
                     placeholder="Nombre del presidente del comité"
                   />
                 </div>
@@ -516,7 +525,7 @@ const CommitteesManagement: FC = () => {
                     value={formData.description}
                     onChange={handleInputChange}
                     rows={4}
-                    className="w-full p-3 bg-[#101010] border border-gray-600 rounded-lg text-[#f0f0f0] focus:border-[#d53137] outline-none resize-none"
+                    className="w-full p-3 bg-glass rounded-lg text-[#f0f0f0] focus:border-[#d53137] outline-none resize-none"
                     placeholder="Descripción del comité y su funcionamiento..."
                   />
                 </div>
@@ -530,7 +539,7 @@ const CommitteesManagement: FC = () => {
                     name="video"
                     value={formData.video}
                     onChange={handleInputChange}
-                    className="w-full p-3 bg-[#101010] border border-gray-600 rounded-lg text-[#f0f0f0] focus:border-[#d53137] outline-none"
+                    className="w-full p-3 bg-glass rounded-lg text-[#f0f0f0] focus:border-[#d53137] outline-none"
                     placeholder="https://..."
                   />
                 </div>
@@ -544,7 +553,7 @@ const CommitteesManagement: FC = () => {
                     name="studyGuide"
                     value={formData.studyGuide}
                     onChange={handleInputChange}
-                    className="w-full p-3 bg-[#101010] border border-gray-600 rounded-lg text-[#f0f0f0] focus:border-[#d53137] outline-none"
+                    className="w-full p-3 bg-glass rounded-lg text-[#f0f0f0] focus:border-[#d53137] outline-none"
                     placeholder="https://..."
                   />
                 </div>
@@ -623,7 +632,7 @@ const CommitteesManagement: FC = () => {
                       value={newSeatName}
                       onChange={(e) => setNewSeatName(e.target.value)}
                       placeholder="Nombre del cupo (ej: Estados Unidos)"
-                      className="flex-1 p-2 bg-[#101010] border border-gray-600 rounded text-[#f0f0f0] focus:border-[#d53137] outline-none text-sm"
+                      className="flex-1 p-2 bg-glass rounded text-[#f0f0f0] focus:border-[#d53137] outline-none text-sm"
                       onKeyPress={(e) => {
                         if (e.key === "Enter") {
                           e.preventDefault();
@@ -647,7 +656,7 @@ const CommitteesManagement: FC = () => {
                       value={bulkSeatsText}
                       onChange={(e) => setBulkSeatsText(e.target.value)}
                       placeholder="Agregar múltiples cupos (uno por línea)&#10;Estados Unidos&#10;Reino Unido&#10;Francia"
-                      className="w-full p-2 bg-[#101010] border border-gray-600 rounded text-[#f0f0f0] focus:border-[#d53137] outline-none text-sm resize-none"
+                      className="w-full p-2 bg-glass rounded text-[#f0f0f0] focus:border-[#d53137] outline-none text-sm resize-none"
                       rows={3}
                     />
                     <button
@@ -660,7 +669,7 @@ const CommitteesManagement: FC = () => {
                   </div>
 
                   {/* Lista de cupos */}
-                  <div className="max-h-64 overflow-y-auto bg-[#101010] border border-gray-600 rounded p-2">
+                  <div className="max-h-64 overflow-y-auto bg-glass rounded p-2">
                     {formData.seatsList.length > 0 ? (
                       <div className="space-y-1">
                         {formData.seatsList.map((seat, index) => (
@@ -718,12 +727,60 @@ const CommitteesManagement: FC = () => {
               </div>
             </div>
 
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="mt-4">
+                <label className="block mb-2 text-sm font-medium text-gray-300">
+                  Máx. cupos por delegación pequeña (&lt; 13)
+                </label>
+                <input
+                  aria-label="input"
+                  type="number"
+                  min="1"
+                  max="10"
+                  value={formData.maxSeatsPerSmallDelegation || 2}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      maxSeatsPerSmallDelegation: parseInt(e.target.value) || 3,
+                    })
+                  }
+                  className="w-full p-2 bg-glass rounded text-[#f0f0f0] focus:border-[#d53137] outline-none"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Límite de cupos que puede seleccionar una delegación pequeña
+                </p>
+              </div>
+
+              <div className="mt-4">
+                <label className="block mb-2 text-sm font-medium text-gray-300">
+                  Máx. cupos por delegación grande (≥ 13)
+                </label>
+                <input
+                  aria-label="input"
+                  type="number"
+                  min="1"
+                  max="15"
+                  value={formData.maxSeatsPerLargeDelegation || 4}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      maxSeatsPerLargeDelegation: parseInt(e.target.value) || 5,
+                    })
+                  }
+                  className="w-full p-2 bg-glass rounded text-[#f0f0f0] focus:border-[#d53137] outline-none"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Límite de cupos que puede seleccionar una delegación grande
+                </p>
+              </div>
+            </div>
+
             {/* Actions */}
             <div className="flex gap-4 mt-8 pt-6 border-t border-gray-600">
               <button
                 type="submit"
                 disabled={isSubmitting || formData.seatsList.length === 0}
-                className="bg-[#d53137] text-white px-8 py-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                className="bg-[#d53137] text-white px-8 py-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 cursor-pointer"
               >
                 <FaSave />
                 {isSubmitting
@@ -735,7 +792,7 @@ const CommitteesManagement: FC = () => {
               <button
                 type="button"
                 onClick={resetForm}
-                className="bg-glass text-[#f0f0f0] px-8 py-3 rounded-lg hover:bg-gray-700 transition-colors flex items-center gap-2"
+                className="bg-glass text-[#f0f0f0] px-8 py-3 rounded-lg hover:bg-gray-700 transition-colors flex items-center gap-2 cursor-pointer"
               >
                 <FaTimes />
                 Cancelar
@@ -754,7 +811,7 @@ const CommitteesManagement: FC = () => {
               key={committee.id}
               className="p-6 bg-glass rounded-lg border border-gray-700 hover:border-[#d53137] transition-all duration-300"
             >
-              <div className="flex items-center justify-center mb-4 h-32 bg-[#101010] rounded overflow-hidden">
+              <div className="flex items-center justify-center mb-4 h-32 rounded overflow-hidden">
                 <img
                   src={committee.img}
                   alt={committee.name}
@@ -806,21 +863,21 @@ const CommitteesManagement: FC = () => {
               <div className="flex gap-2 mt-6 pt-4 border-t border-gray-600">
                 <button
                   onClick={() => openDetailModal(committee)}
-                  className="flex-1 bg-blue-600 text-white px-3 py-2 rounded text-sm flex items-center justify-center gap-2 hover:bg-blue-700 transition-colors"
+                  className="flex-1 bg-blue-600 text-white px-3 py-2 rounded text-sm flex items-center justify-center gap-2 hover:bg-blue-700 transition-colors cursor-pointer"
                 >
                   <FaEye />
                   Ver
                 </button>
                 <button
                   onClick={() => handleEdit(committee)}
-                  className="flex-1 bg-glass text-white px-3 py-2 rounded text-sm flex items-center justify-center gap-2 hover:bg-gray-700 transition-colors"
+                  className="flex-1 bg-glass text-white px-3 py-2 rounded text-sm flex items-center justify-center gap-2 hover:bg-gray-700 transition-colors cursor-pointer"
                 >
                   <FaEdit />
                   Editar
                 </button>
                 <button
                   onClick={() => handleDelete(committee.id!)}
-                  className="flex-1 bg-[#d53137] text-white px-3 py-2 rounded text-sm flex items-center justify-center gap-2 hover:bg-red-700 transition-colors"
+                  className="flex-1 bg-[#d53137] text-white px-3 py-2 rounded text-sm flex items-center justify-center gap-2 hover:bg-red-700 transition-colors cursor-pointer"
                 >
                   <FaTrash />
                   Eliminar
@@ -843,7 +900,7 @@ const CommitteesManagement: FC = () => {
           </p>
           <button
             onClick={() => setShowForm(true)}
-            className="bg-[#d53137] text-white px-8 py-3 rounded-lg hover:bg-[#b71c1c] transition-colors inline-flex items-center gap-2"
+            className="bg-[#d53137] text-white px-8 py-3 rounded-lg hover:bg-[#b71c1c] transition-colors inline-flex items-center gap-2 cursor-pointer"
           >
             <FaPlus />
             Agregar Comité
@@ -864,7 +921,7 @@ const CommitteesManagement: FC = () => {
             </p>
             <button
               onClick={() => setSearchTerm("")}
-              className="bg-[#d53137] text-white px-6 py-3 rounded-lg hover:bg-[#b71c1c] transition-colors"
+              className="bg-[#d53137] text-white px-6 py-3 rounded-lg hover:bg-[#b71c1c] transition-colors cursor-pointer"
             >
               Limpiar búsqueda
             </button>
@@ -943,7 +1000,7 @@ const CommitteeDetailModal: FC<{
               <img
                 src={committee.img}
                 alt={committee.name}
-                className="w-full h-48 object-contain bg-[#101010] rounded mb-4"
+                className="w-full h-48 object-contain rounded mb-4"
               />
 
               <div className="space-y-3">
