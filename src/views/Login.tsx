@@ -41,7 +41,14 @@ const registerSchema = loginSchema.extend({
 });
 
 const facultySchema = registerSchema.extend({
-  facultyCode: z.string().regex(/^\d{6}$/, "Código inválido"),
+  facultyCode: z
+    .string()
+    .min(6, "El código debe tener 6 caracteres")
+    .max(6, "El código debe tener 6 caracteres")
+    .regex(
+      /^[A-Z0-9]{6}$/,
+      "Código inválido. Debe tener 6 caracteres alfanuméricos"
+    ),
 });
 
 interface FormData {
@@ -186,7 +193,7 @@ const Login: FC = () => {
   };
 
   const handleFacultyCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { value } = e.target;
+    const value = e.target.value.toUpperCase();
     setFormData((prev) => ({
       ...prev,
       facultyCode: value,
