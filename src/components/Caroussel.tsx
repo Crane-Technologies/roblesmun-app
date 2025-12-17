@@ -843,9 +843,9 @@ const Caroussel: FC<CarousselProps> = ({
                 <div className="flex justify-between font-montserrat-bold text-base pt-2 border-t border-[#282828]">
                   <span>Total a pagar:</span>
                   <span className="text-green-400">
-                    $
+                    €
                     {(() => {
-                      const cuposCost = formData!.seatsRequested.length * 10;
+                      const cuposCost = formData!.seatsRequested.length * 15;
                       const delegationFee = formData!.independentDelegate
                         ? 0
                         : formData!.isBigGroup
@@ -867,10 +867,10 @@ const Caroussel: FC<CarousselProps> = ({
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
                       <span>
-                        Cupos ({formData!.seatsRequested.length} × $10.00):
+                        Cupos ({formData!.seatsRequested.length} × €15.00):
                       </span>
                       <span>
-                        ${(formData!.seatsRequested.length * 10).toFixed(2)}
+                        €{(formData!.seatsRequested.length * 15).toFixed(2)}
                       </span>
                     </div>
 
@@ -880,7 +880,7 @@ const Caroussel: FC<CarousselProps> = ({
                           Tarifa de delegación (
                           {formData!.isBigGroup ? "grande" : "pequeña"}):
                         </span>
-                        <span>${formData!.isBigGroup ? "30.00" : "20.00"}</span>
+                        <span>€{formData!.isBigGroup ? "30.00" : "20.00"}</span>
                       </div>
                     )}
                   </div>
