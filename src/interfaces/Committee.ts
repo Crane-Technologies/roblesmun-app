@@ -12,6 +12,7 @@ export interface Committee {
   studyGuide?: string;
   legalFramework?: string[];
   president?: string;
-  maxSeatsPerSmallDelegation?: number; // Máximo de cupos para delegación pequeña (< 13)
-  maxSeatsPerLargeDelegation?: number; // Máximo de cupos para delegación grande (>= 13)
+  maxSeatsPerSmallDelegation?: number;
+  maxSeatsPerLargeDelegation?: number;
+  isDoubleSeat?: boolean;
 }

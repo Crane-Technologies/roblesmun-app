@@ -511,7 +511,7 @@ const Caroussel: FC<CarousselProps> = ({
                       className="w-full h-48 object-contain mb-2"
                       onError={(e) => {
                         (e.target as HTMLImageElement).src =
-                          "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTEyIDJMMTMuMDkgOC4yNkwyMCA5TDEzLjA5IDE1Ljc0TDEyIDIyTDEwLjkxIDE1Ljc0TDQgOUwxMC45MSA4LjI2TDEyIDJaIiBmaWxsPSIjNjY2Ii8+Cjwvc3ZnPgo=";
+                          "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTEyIDJMMTMuMDkgOC4yNkwyMCA9TDEzLjA5IDE1Ljc0TDEyIDIyTDEwLjkxIDE1Ljc0TDQgOUwxMC45MSA4LjI2TDEyIDJaIiBmaWxsPSIjNjY2Ii8+Cjwvc3ZnPgo=";
                       }}
                     />
                     <h4 className="font-montserrat-bold mb-2 text-center min-h-[40px] flex items-center justify-center">
@@ -845,7 +845,19 @@ const Caroussel: FC<CarousselProps> = ({
                   <span className="text-green-400">
                     €
                     {(() => {
-                      const cuposCost = formData!.seatsRequested.length * 15;
+                      // Calcular costo de cupos según tipo de comité
+                      const cuposCost = formData!.seatsRequested.reduce(
+                        (total, seatStr) => {
+                          const committeeName = seatStr.split(" - ")[0];
+                          const committee = committees.find(
+                            (c) => c.name === committeeName
+                          );
+                          const costPerSeat = committee?.isDoubleSeat ? 30 : 15; // €30 para dobles, €15 normales
+                          return total + costPerSeat;
+                        },
+                        0
+                      );
+
                       const delegationFee = formData!.independentDelegate
                         ? 0
                         : formData!.isBigGroup
@@ -866,13 +878,68 @@ const Caroussel: FC<CarousselProps> = ({
                 <div className="mt-4 pt-3 border-t border-[#282828]">
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
+                      <span>Cupos:</span>
                       <span>
-                        Cupos ({formData!.seatsRequested.length} × €15.00):
-                      </span>
-                      <span>
-                        €{(formData!.seatsRequested.length * 15).toFixed(2)}
+                        €
+                        {formData!.seatsRequested
+                          .reduce((total, seatStr) => {
+                            const committeeName = seatStr.split(" - ")[0];
+                            const committee = committees.find(
+                              (c) => c.name === committeeName
+                            );
+                            return total + (committee?.isDoubleSeat ? 30 : 15);
+                          }, 0)
+                          .toFixed(2)}
                       </span>
                     </div>
+
+                    {/* Desglose por tipo de cupo */}
+                    {(() => {
+                      const normalSeats = formData!.seatsRequested.filter(
+                        (seatStr) => {
+                          const committeeName = seatStr.split(" - ")[0];
+                          const committee = committees.find(
+                            (c) => c.name === committeeName
+                          );
+                          return !committee?.isDoubleSeat;
+                        }
+                      );
+
+                      const doubleSeats = formData!.seatsRequested.filter(
+                        (seatStr) => {
+                          const committeeName = seatStr.split(" - ")[0];
+                          const committee = committees.find(
+                            (c) => c.name === committeeName
+                          );
+                          return committee?.isDoubleSeat;
+                        }
+                      );
+
+                      return (
+                        <>
+                          {normalSeats.length > 0 && (
+                            <div className="flex justify-between text-xs text-gray-400 pl-4">
+                              <span>
+                                • Individuales ({normalSeats.length} × €15.00):
+                              </span>
+                              <span>
+                                €{(normalSeats.length * 15).toFixed(2)}
+                              </span>
+                            </div>
+                          )}
+                          {doubleSeats.length > 0 && (
+                            <div className="flex justify-between text-xs text-gray-400 pl-4">
+                              <span>
+                                • Parejas ({doubleSeats.length} × €30.00):
+                              </span>
+                              <span>
+                                €{(doubleSeats.length * 30).toFixed(2)}
+                              </span>
+                            </div>
+                          )}
+                        </>
+                      );
+                    })()}
 
                     {!formData!.independentDelegate && (
                       <div className="flex justify-between text-sm">

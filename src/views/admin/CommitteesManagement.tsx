@@ -516,6 +516,32 @@ const CommitteesManagement: FC = () => {
                   />
                 </div>
 
+                {/* ✅ NUEVO: Checkbox para cupos dobles */}
+                <div className="flex items-center gap-3 p-3 bg-glass rounded-lg">
+                  <input
+                    type="checkbox"
+                    id="isDoubleSeat"
+                    checked={formData.isDoubleSeat || false}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        isDoubleSeat: e.target.checked,
+                      })
+                    }
+                    className="w-5 h-5 text-[#d53137] bg-gray-700 border-gray-600 rounded focus:ring-[#d53137] focus:ring-2"
+                  />
+                  <label
+                    htmlFor="isDoubleSeat"
+                    className="text-sm font-medium text-gray-300 cursor-pointer"
+                  >
+                    Cupos dobles (2 delegados por cupo - €30)
+                    <span className="block text-xs text-gray-500 mt-1">
+                      Activar para comités en pareja (Corte, Consejo de
+                      Seguridad, etc.)
+                    </span>
+                  </label>
+                </div>
+
                 <div>
                   <label className="block mb-2 text-sm font-medium text-gray-300">
                     Descripción
