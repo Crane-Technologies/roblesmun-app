@@ -100,7 +100,6 @@ const Caroussel: FC<CarousselProps> = ({
   >({});
 
   const [rate, setRate] = useState<number>(180);
-  const [rateLoading, setRateLoading] = useState<boolean>(true);
 
   const fetchCommittees = async () => {
     setCommitteesLoading(true);
@@ -138,8 +137,6 @@ const Caroussel: FC<CarousselProps> = ({
     } catch (error) {
       console.error("❌ Error cargando la tasa:", error);
       // Mantener el valor por defecto si hay error
-    } finally {
-      setRateLoading(false);
     }
   };
 
