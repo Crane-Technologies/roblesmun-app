@@ -1,4 +1,4 @@
-import { type FC, useRef, useState, useEffect } from "react";
+import { type FC, useState, useEffect } from "react";
 import { z } from "zod";
 import { paymentInformation } from "../config/paymentInfo";
 import type { RegistrationForm } from "../interfaces/RegistrationForm";
@@ -7,6 +7,7 @@ import { FaCheck } from "react-icons/fa6";
 import Loader from "./Loader";
 import { PDFGenerator } from "./PDFGenerator";
 import { FirestoreService } from "../firebase/firestore";
+import type { RegistrationConfig } from "../interfaces/RegistrationConfig";
 
 const step1Schema = z.object({
   seats: z
@@ -98,7 +99,8 @@ const Caroussel: FC<CarousselProps> = ({
     Record<string, number>
   >({});
 
-  const rate = useRef(180);
+  const [rate, setRate] = useState<number>(180);
+  const [rateLoading, setRateLoading] = useState<boolean>(true);
 
   const fetchCommittees = async () => {
     setCommitteesLoading(true);
@@ -123,8 +125,27 @@ const Caroussel: FC<CarousselProps> = ({
     }
   };
 
+  const fetchRate = async () => {
+    try {
+      const config = await FirestoreService.getById<RegistrationConfig>(
+        "config",
+        "registration"
+      );
+      if (config?.rate) {
+        setRate(config.rate);
+        console.log("✅ Tasa cargada:", config.rate);
+      }
+    } catch (error) {
+      console.error("❌ Error cargando la tasa:", error);
+      // Mantener el valor por defecto si hay error
+    } finally {
+      setRateLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchCommittees();
+    fetchRate();
   }, []);
 
   const validateCurrentStep = (): boolean => {
@@ -845,14 +866,13 @@ const Caroussel: FC<CarousselProps> = ({
                   <span className="text-green-400">
                     €
                     {(() => {
-                      // Calcular costo de cupos según tipo de comité
                       const cuposCost = formData!.seatsRequested.reduce(
                         (total, seatStr) => {
                           const committeeName = seatStr.split(" - ")[0];
                           const committee = committees.find(
                             (c) => c.name === committeeName
                           );
-                          const costPerSeat = committee?.isDoubleSeat ? 30 : 15; // €30 para dobles, €15 normales
+                          const costPerSeat = committee?.isDoubleSeat ? 30 : 15;
                           return total + costPerSeat;
                         },
                         0
@@ -872,8 +892,11 @@ const Caroussel: FC<CarousselProps> = ({
                   </span>
                 </div>
                 <span className="text-sm text-right font-montserrat-bold">
-                  <p>Bs. {(formData!.amount * rate.current).toFixed(2)}</p>
+                  <p>Bs. {(formData!.amount * rate).toFixed(2)}</p>
                 </span>
+                <p className="text-right text-xs text-gray-400">
+                  Tasa actual: Bs. {rate}/€
+                </p>
 
                 <div className="mt-4 pt-3 border-t border-[#282828]">
                   <div className="space-y-2">
@@ -893,7 +916,6 @@ const Caroussel: FC<CarousselProps> = ({
                       </span>
                     </div>
 
-                    {/* Desglose por tipo de cupo */}
                     {(() => {
                       const normalSeats = formData!.seatsRequested.filter(
                         (seatStr) => {

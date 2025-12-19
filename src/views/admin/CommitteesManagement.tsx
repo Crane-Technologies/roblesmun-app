@@ -516,7 +516,6 @@ const CommitteesManagement: FC = () => {
                   />
                 </div>
 
-                {/* ✅ NUEVO: Checkbox para cupos dobles */}
                 <div className="flex items-center gap-3 p-3 bg-glass rounded-lg">
                   <input
                     type="checkbox"
