@@ -87,9 +87,6 @@ export class AssignmentValidationService {
     };
   }
 
-  /**
-   * ✅ NUEVO: Actualizar disponibilidad de cupos en comités
-   */
   private static async updateCommitteeSeatsAvailability(
     assignedSeats: string[],
     makeUnavailable: boolean = true
@@ -101,40 +98,58 @@ export class AssignmentValidationService {
         } cupos...`
       );
 
-      // Obtener todos los comités
       const committees = await FirestoreService.getAll<
         Committee & { id?: string }
       >("committees");
 
-      // Agrupar cupos por comité
       const seatsByCommittee = new Map<string, string[]>();
 
       assignedSeats.forEach((assignedSeat) => {
-        // Formato: "Nombre del Comité - Nombre del Cupo"
-        const [committeeName, seatName] = assignedSeat.split(" - ");
+        const separatorIndex = assignedSeat.indexOf(" - ");
+
+        if (separatorIndex === -1) {
+          console.warn(`⚠️ Formato inválido de cupo asignado: ${assignedSeat}`);
+          return;
+        }
+
+        const committeeName = assignedSeat.substring(0, separatorIndex).trim();
+        const seatName = assignedSeat.substring(separatorIndex + 3).trim();
+
+        console.log(
+          `📋 Procesando: Comité="${committeeName}", Cupo="${seatName}"`
+        );
 
         if (committeeName && seatName) {
           if (!seatsByCommittee.has(committeeName)) {
             seatsByCommittee.set(committeeName, []);
           }
-          seatsByCommittee.get(committeeName)?.push(seatName.trim());
+          seatsByCommittee.get(committeeName)?.push(seatName);
         }
       });
 
-      // Actualizar cada comité
       const updatePromises = Array.from(seatsByCommittee.entries()).map(
         async ([committeeName, seatsToUpdate]) => {
-          // Encontrar el comité por nombre
-          const committee = committees.find((c) => c.name === committeeName);
+          const committee = committees.find(
+            (c) =>
+              c.name?.trim().toLowerCase() ===
+              committeeName.trim().toLowerCase()
+          );
 
           if (!committee || !committee.id) {
-            console.warn(`⚠️ Comité no encontrado: ${committeeName}`);
+            console.warn(`⚠️ Comité no encontrado: "${committeeName}"`);
+            console.log(
+              `📋 Comités disponibles:`,
+              committees.map((c) => c.name)
+            );
             return;
           }
 
-          // Actualizar la disponibilidad de los cupos
           const updatedSeatsList = committee.seatsList.map((seat) => {
-            if (seatsToUpdate.includes(seat.name)) {
+            const shouldUpdate = seatsToUpdate.some(
+              (s) => s.trim().toLowerCase() === seat.name.trim().toLowerCase()
+            );
+
+            if (shouldUpdate) {
               console.log(
                 `${makeUnavailable ? "❌" : "✅"} ${committeeName} - ${
                   seat.name
@@ -142,7 +157,7 @@ export class AssignmentValidationService {
               );
               return {
                 ...seat,
-                available: !makeUnavailable, // Si makeUnavailable=true, available=false
+                available: !makeUnavailable,
               };
             }
             return seat;
