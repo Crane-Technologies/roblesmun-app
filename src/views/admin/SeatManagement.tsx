@@ -518,7 +518,7 @@ const SeatManagement: FC = () => {
             onClick={closeSeatsModal}
           >
             <div
-              className="bg-glass max-h-[90%] overflow-auto rounded-lg max-w-4xl w-full my-8"
+              className="bg-black/10 rounded-xl border border-white/20 shadow-lg backdrop-blur-lg max-h-[90%] overflow-auto max-w-4xl w-full my-8"
               onClick={(e) => e.stopPropagation()}
             >
               {/* header del modal*/}
