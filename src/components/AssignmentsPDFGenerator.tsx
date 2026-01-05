@@ -86,7 +86,6 @@ export class AssignmentsPDFGenerator {
 
     yPosition += sectionSpacing;
 
-    // === INFORMACIÓN DE ASIGNACIÓN ===
     pdf.setFillColor(240, 255, 240);
     pdf.rect(20, yPosition - 5, pageWidth - 40, 30, "F");
 
@@ -116,7 +115,6 @@ export class AssignmentsPDFGenerator {
 
     yPosition += sectionSpacing;
 
-    // === CUPOS ASIGNADOS ===
     if (assignedSeats.length > 0) {
       pdf.setFontSize(14);
       pdf.setFont("helvetica", "bold");
@@ -124,7 +122,6 @@ export class AssignmentsPDFGenerator {
       pdf.text(`Cupos Asignados (${assignedSeats.length})`, 20, yPosition);
       yPosition += lineHeight + 2;
 
-      // Fondo verde claro para la lista
       pdf.setFillColor(240, 255, 240);
       const listHeight = assignedSeats.length * 6 + 10;
       pdf.rect(20, yPosition - 2, pageWidth - 40, listHeight, "F");
@@ -144,7 +141,6 @@ export class AssignmentsPDFGenerator {
       yPosition += 15;
     }
 
-    // === CUPOS NO ASIGNADOS (si los hay) ===
     const unassignedSeats = registration.seatsRequested.filter(
       (seat) => !assignedSeats.includes(seat)
     );
@@ -156,7 +152,6 @@ export class AssignmentsPDFGenerator {
       pdf.text(`Cupos No Asignados (${unassignedSeats.length})`, 20, yPosition);
       yPosition += lineHeight + 2;
 
-      // Fondo rojo claro para la lista
       pdf.setFillColor(255, 240, 240);
       const listHeight = unassignedSeats.length * 6 + 10;
       pdf.rect(20, yPosition - 2, pageWidth - 40, listHeight, "F");
@@ -166,7 +161,7 @@ export class AssignmentsPDFGenerator {
       pdf.setTextColor(...darkGray);
 
       unassignedSeats.forEach((seat, index) => {
-        pdf.setTextColor(220, 38, 38); // Rojo
+        pdf.setTextColor(220, 38, 38);
         pdf.text(`✗ ${index + 1}.`, 25, yPosition + 3);
         pdf.setTextColor(...darkGray);
         pdf.text(seat, 40, yPosition + 3);

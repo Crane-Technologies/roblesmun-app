@@ -13,6 +13,7 @@ import {
   FaClipboardList,
   FaLock,
   FaLockOpen,
+  FaEyeSlash,
 } from "react-icons/fa";
 import { CiImport } from "react-icons/ci";
 import Loader from "../../components/Loader";
@@ -66,6 +67,7 @@ const RegistrationsManagement: FC = () => {
   const [registrationsOpen, setRegistrationsOpen] = useState<boolean>(false);
   const [isTogglingRegistrations, setIsTogglingRegistrations] =
     useState<boolean>(false);
+  const [hideRejected, setHideRejected] = useState<boolean>(true);
 
   const fetchRegistrations = async () => {
     setIsLoading(true);
@@ -205,7 +207,6 @@ const RegistrationsManagement: FC = () => {
     setShowDetailModal(false);
   };
 
-  // Funciones para asignación
   const openAssignmentModal = (registration: RegistrationWithId) => {
     setSelectedRegistration(registration);
     setShowAssignmentModal(true);
@@ -242,7 +243,6 @@ const RegistrationsManagement: FC = () => {
     fetchRegistrations();
   }, []);
 
-  // Leer la tasa al montar
   useEffect(() => {
     const fetchRate = async () => {
       setRateLoading(true);
@@ -264,7 +264,6 @@ const RegistrationsManagement: FC = () => {
     fetchRate();
   }, []);
 
-  // Leer estado de inscripciones al montar
   useEffect(() => {
     const fetchRegistrationsStatus = async () => {
       try {
@@ -316,7 +315,6 @@ const RegistrationsManagement: FC = () => {
     },
   ];
 
-  // Actualizar la tasa en Firestore
   const handleRateUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     const newRate = parseFloat(rateInput);
@@ -337,7 +335,6 @@ const RegistrationsManagement: FC = () => {
     }
   };
 
-  // Función para alternar estado de inscripciones
   const handleToggleRegistrations = async () => {
     const newState = !registrationsOpen;
     const confirmMessage = newState
@@ -350,7 +347,7 @@ const RegistrationsManagement: FC = () => {
     try {
       await FirestoreService.set("config", "registration", {
         registrationsOpen: newState,
-        rate: rate, // Mantener la tasa actual
+        rate: rate,
         updatedAt: new Date().toISOString(),
       });
       setRegistrationsOpen(newState);
@@ -362,6 +359,11 @@ const RegistrationsManagement: FC = () => {
       setIsTogglingRegistrations(false);
     }
   };
+
+  // Modifica el array que se renderiza según el estado hideRejected
+  const visibleRegistrations = hideRejected
+    ? filteredRegistrations.filter((r) => r.status !== "rejected")
+    : filteredRegistrations;
 
   return (
     <div className="p-12 font-montserrat-light w-full">
@@ -393,7 +395,6 @@ const RegistrationsManagement: FC = () => {
         </div>
       </div>
 
-      {/* Filters and Sorting */}
       {!isLoading && registrations.length > 0 && (
         <div className="flex flex-col lg:flex-row gap-4 mb-6">
           <div className="flex flex-wrap gap-2">
@@ -453,7 +454,7 @@ const RegistrationsManagement: FC = () => {
             )}
             Estado de Inscripciones
           </h2>
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-8">
             <div>
               <p className="text-sm text-gray-400 mb-1">Estado actual:</p>
               <p
@@ -481,9 +482,9 @@ const RegistrationsManagement: FC = () => {
           <button
             onClick={handleToggleRegistrations}
             disabled={isTogglingRegistrations}
-            className={`w-full py-3 rounded-lg font-montserrat-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+            className={`w-full py-3 rounded-lg font-montserrat-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer ${
               registrationsOpen
-                ? "bg-red-600 hover:bg-red-700 text-white"
+                ? "bg-[#d53137] hover:bg-[#b71c1c] text-white"
                 : "bg-green-600 hover:bg-green-700 text-white"
             }`}
           >
@@ -524,7 +525,7 @@ const RegistrationsManagement: FC = () => {
             </div>
             <button
               type="submit"
-              className="w-full bg-[#d53137] text-white py-3 rounded-lg hover:bg-[#b71c1c] transition-colors font-montserrat-bold disabled:opacity-50"
+              className="w-full bg-[#d53137] text-white py-3 rounded-lg hover:bg-[#b71c1c] transition-colors font-montserrat-bold disabled:opacity-50 cursor-pointer"
               disabled={rateLoading}
             >
               {rateLoading ? "Guardando..." : "Actualizar Tasa"}
@@ -533,10 +534,19 @@ const RegistrationsManagement: FC = () => {
         </div>
       </div>
 
-      {/* Registrations Grid */}
+      <div className="mb-4 flex items-center gap-4">
+        <button
+          onClick={() => setHideRejected((prev) => !prev)}
+          className="cursor-pointer flex items-center gap-2 px-4 py-2 bg-glass border border-gray-600 rounded-lg text-[#f0f0f0] hover:border-[#d53137] hover:bg-gray-700 transition-colors"
+        >
+          {hideRejected ? <FaEyeSlash /> : <FaEye />}
+          {hideRejected ? "Mostrar rechazadas" : "Ocultar rechazadas"}
+        </button>
+      </div>
+
       {!isLoading && (
         <div className="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-6">
-          {filteredRegistrations.map((registration) => (
+          {visibleRegistrations.map((registration) => (
             <div
               key={registration.id}
               className="p-6 bg-glass rounded-lg border border-gray-700 hover:border-[#d53137] transition-all duration-300"
@@ -645,7 +655,7 @@ const RegistrationsManagement: FC = () => {
                     onClick={() =>
                       handleStatusUpdate(registration.id, "rejected")
                     }
-                    className="flex-1 bg-[#d53137] hover:bg-[#b71c1c] font-montserrat-bold cursor-pointer p-2 rounded text-xs transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex-1 bg-[#d53137] hover:bg-[#b71c1c] font-montserrat-bold cursor-pointer p-4 rounded text-xs transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     disabled={registration.status === "rejected"}
                   >
                     Rechazar

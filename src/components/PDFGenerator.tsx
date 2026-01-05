@@ -1,6 +1,9 @@
 import jsPDF from "jspdf";
 import type { RegistrationForm } from "../interfaces/RegistrationForm";
+import type { Committee } from "../interfaces/Committee";
 import { SupabaseStorage } from "../supabase/storage";
+import { FirestoreService } from "../firebase/firestore";
+import type { RegistrationConfig } from "../interfaces/RegistrationConfig";
 
 interface PDFGeneratorProps {
   formData: RegistrationForm;
@@ -8,12 +11,15 @@ interface PDFGeneratorProps {
 }
 
 export class PDFGenerator {
-  static generateRegistrationPDF(formData: RegistrationForm): jsPDF {
+  static async generateRegistrationPDF(
+    formData: RegistrationForm,
+    committees: Committee[] = [],
+    rate: number = 180
+  ): Promise<jsPDF> {
     const pdf = new jsPDF();
     const pageWidth = pdf.internal.pageSize.width;
     const pageHeight = pdf.internal.pageSize.height;
 
-    // Colores
     const primaryColor: [number, number, number] = [213, 49, 55];
     const darkGray: [number, number, number] = [36, 36, 36];
 
@@ -21,7 +27,6 @@ export class PDFGenerator {
     const lineHeight = 8;
     const sectionSpacing = 15;
 
-    // === HEADER ===
     pdf.setFillColor(...primaryColor);
     pdf.rect(0, 0, pageWidth, 25, "F");
 
@@ -146,31 +151,64 @@ export class PDFGenerator {
 
     // === CUPOS PRINCIPALES ===
     if (formData.seatsRequested.length > 0) {
+      if (yPosition > pageHeight - 50) {
+        pdf.addPage();
+        yPosition = 30;
+      }
+
       pdf.setFontSize(14);
       pdf.setFont("helvetica", "bold");
       pdf.setTextColor(...primaryColor);
       pdf.text("Cupos Principales Seleccionados", 20, yPosition);
       yPosition += lineHeight + 2;
 
-      pdf.setFillColor(248, 248, 248);
-      const listHeight = formData.seatsRequested.length * 6 + 10;
-      pdf.rect(20, yPosition - 2, pageWidth - 40, listHeight, "F");
-
       pdf.setFontSize(9);
       pdf.setFont("helvetica", "normal");
       pdf.setTextColor(...darkGray);
 
       formData.seatsRequested.forEach((seat, index) => {
-        pdf.text(`${index + 1}. ${seat}`, 25, yPosition + 3);
-        yPosition += 6;
+        // Divide el texto si es muy largo
+        const seatLines = pdf.splitTextToSize(
+          `${index + 1}. ${seat}`,
+          pageWidth - 50
+        );
+        const itemHeight = seatLines.length * 5 + 2; // 5px por línea + 2px padding
+
+        // Salto de página si no cabe el fondo completo
+        if (yPosition + itemHeight > pageHeight - 30) {
+          pdf.addPage();
+          yPosition = 30;
+
+          pdf.setFontSize(14);
+          pdf.setFont("helvetica", "bold");
+          pdf.setTextColor(...primaryColor);
+          pdf.text(
+            "Cupos Principales Seleccionados (continuación)",
+            20,
+            yPosition
+          );
+          yPosition += lineHeight + 2;
+
+          pdf.setFontSize(9);
+          pdf.setFont("helvetica", "normal");
+          pdf.setTextColor(...darkGray);
+        }
+
+        pdf.setFillColor(248, 248, 248);
+        pdf.rect(20, yPosition - 2, pageWidth - 40, itemHeight, "F");
+
+        seatLines.forEach((line: string, i: number) => {
+          pdf.text(line, 25, yPosition + 5 * i + 3);
+        });
+
+        yPosition += itemHeight;
       });
 
       yPosition += 10;
     }
 
-    // === CUPOS DE RESPALDO ===
     if (formData.requiresBackup && formData.backupSeatsRequested.length > 0) {
-      if (yPosition > pageHeight - 60) {
+      if (yPosition > pageHeight - 50) {
         pdf.addPage();
         yPosition = 30;
       }
@@ -181,17 +219,44 @@ export class PDFGenerator {
       pdf.text("Cupos de Respaldo Seleccionados", 20, yPosition);
       yPosition += lineHeight + 2;
 
-      pdf.setFillColor(255, 248, 220);
-      const backupListHeight = formData.backupSeatsRequested.length * 6 + 10;
-      pdf.rect(20, yPosition - 2, pageWidth - 40, backupListHeight, "F");
-
       pdf.setFontSize(9);
       pdf.setFont("helvetica", "normal");
       pdf.setTextColor(...darkGray);
 
       formData.backupSeatsRequested.forEach((seat, index) => {
-        pdf.text(`${index + 1}. ${seat}`, 25, yPosition + 3);
-        yPosition += 6;
+        const seatLines = pdf.splitTextToSize(
+          `${index + 1}. ${seat}`,
+          pageWidth - 50
+        );
+        const itemHeight = seatLines.length * 5 + 2;
+
+        if (yPosition + itemHeight > pageHeight - 30) {
+          pdf.addPage();
+          yPosition = 30;
+
+          pdf.setFontSize(14);
+          pdf.setFont("helvetica", "bold");
+          pdf.setTextColor(...primaryColor);
+          pdf.text(
+            "Cupos de Respaldo Seleccionados (continuación)",
+            20,
+            yPosition
+          );
+          yPosition += lineHeight + 2;
+
+          pdf.setFontSize(9);
+          pdf.setFont("helvetica", "normal");
+          pdf.setTextColor(...darkGray);
+        }
+
+        pdf.setFillColor(255, 248, 220);
+        pdf.rect(20, yPosition - 2, pageWidth - 40, itemHeight, "F");
+
+        seatLines.forEach((line: string, i: number) => {
+          pdf.text(line, 25, yPosition + 5 * i + 3);
+        });
+
+        yPosition += itemHeight;
       });
 
       yPosition += 15;
@@ -209,39 +274,70 @@ export class PDFGenerator {
     pdf.text("Resumen Financiero", 20, yPosition);
     yPosition += lineHeight + 2;
 
-    // Cálculos
-    const cuposCost = formData.seatsRequested.length * 10;
+    // Cálculos actualizados
+    const cuposCost = formData.seatsRequested.reduce((total, seatStr) => {
+      const committeeName = seatStr.split(" - ")[0];
+      const committee = committees.find((c) => c.name === committeeName);
+      const costPerSeat = committee?.isDoubleSeat ? 30 : 15;
+      return total + costPerSeat;
+    }, 0);
+
+    const normalSeatsCount = formData.seatsRequested.filter((seatStr) => {
+      const committeeName = seatStr.split(" - ")[0];
+      const committee = committees.find((c) => c.name === committeeName);
+      return !committee?.isDoubleSeat;
+    }).length;
+
+    const doubleSeatsCount = formData.seatsRequested.filter((seatStr) => {
+      const committeeName = seatStr.split(" - ")[0];
+      const committee = committees.find((c) => c.name === committeeName);
+      return committee?.isDoubleSeat;
+    }).length;
+
     const delegationFee = formData.independentDelegate
       ? 0
       : formData.isBigGroup
       ? 30
       : 20;
     const totalAmount = cuposCost + delegationFee;
-    const bolivarRate = 36; // Tasa de ejemplo
-    const totalBolivars = totalAmount * bolivarRate;
+    const totalBolivars = totalAmount * rate;
 
     // Fondo para resumen financiero
     pdf.setFillColor(240, 255, 240);
-    pdf.rect(20, yPosition - 2, pageWidth - 40, 35, "F");
+    pdf.rect(20, yPosition - 2, pageWidth - 40, 45, "F");
 
     pdf.setFontSize(10);
     pdf.setFont("helvetica", "normal");
     pdf.setTextColor(...darkGray);
 
     const financialSummary = [
-      [
-        `Cupos principales (${formData.seatsRequested.length} × $10.00):`,
-        `$${cuposCost.toFixed(2)}`,
-      ],
+      [`Cupos principales:`, `€${cuposCost.toFixed(2)}`],
+      ...(normalSeatsCount > 0
+        ? [
+            [
+              `  • Individuales (${normalSeatsCount} × €15.00):`,
+              `€${(normalSeatsCount * 15).toFixed(2)}`,
+            ],
+          ]
+        : []),
+      ...(doubleSeatsCount > 0
+        ? [
+            [
+              `  • Parejas (${doubleSeatsCount} × €30.00):`,
+              `€${(doubleSeatsCount * 30).toFixed(2)}`,
+            ],
+          ]
+        : []),
       [
         "Tarifa de delegación:",
         delegationFee > 0
-          ? `$${delegationFee.toFixed(2)}`
+          ? `€${delegationFee.toFixed(2)}`
           : "N/A (Delegado independiente)",
       ],
       ["", ""], // Línea en blanco
-      ["TOTAL A PAGAR:", `$${totalAmount.toFixed(2)} USD`],
+      ["TOTAL A PAGAR:", `€${totalAmount.toFixed(2)}`],
       ["Equivalente en Bs.:", `Bs. ${totalBolivars.toFixed(2)}`],
+      ["Tasa de cambio:", `Bs. ${rate.toFixed(2)}/€`],
     ];
 
     financialSummary.forEach(([label, value]) => {
@@ -254,6 +350,10 @@ export class PDFGenerator {
         pdf.setFont("helvetica", "bold");
         pdf.setFontSize(11);
         pdf.setTextColor(...primaryColor);
+      } else if (label.startsWith("  •")) {
+        pdf.setFont("helvetica", "normal");
+        pdf.setFontSize(9);
+        pdf.setTextColor(100, 100, 100);
       } else {
         pdf.setFont("helvetica", "normal");
         pdf.setFontSize(10);
@@ -324,16 +424,46 @@ export class PDFGenerator {
     return pdf;
   }
 
-  static downloadPDF(formData: RegistrationForm): void {
-    const pdf = this.generateRegistrationPDF(formData);
+  static async downloadPDF(formData: RegistrationForm): Promise<void> {
+    // Cargar comités y tasa
+    const committees = await FirestoreService.getAll<Committee>("committees");
+    let rate = 180;
+    try {
+      const config = await FirestoreService.getById<RegistrationConfig>(
+        "config",
+        "registration"
+      );
+      if (config?.rate) {
+        rate = config.rate;
+      }
+    } catch (error) {
+      console.error("❌ Error cargando la tasa:", error);
+    }
+
+    const pdf = await this.generateRegistrationPDF(formData, committees, rate);
     const fileName = `roblesmun-inscripcion-${
       formData.transactionId || Date.now()
     }.pdf`;
     pdf.save(fileName);
   }
 
-  static getPDFBlob(formData: RegistrationForm): Blob {
-    const pdf = this.generateRegistrationPDF(formData);
+  static async getPDFBlob(formData: RegistrationForm): Promise<Blob> {
+    // Cargar comités y tasa
+    const committees = await FirestoreService.getAll<Committee>("committees");
+    let rate = 180;
+    try {
+      const config = await FirestoreService.getById<RegistrationConfig>(
+        "config",
+        "registration"
+      );
+      if (config?.rate) {
+        rate = config.rate;
+      }
+    } catch (error) {
+      console.error("❌ Error cargando la tasa:", error);
+    }
+
+    const pdf = await this.generateRegistrationPDF(formData, committees, rate);
     return pdf.output("blob");
   }
 
@@ -343,7 +473,26 @@ export class PDFGenerator {
     try {
       console.log("🔄 Aplicando upload directo simplificado...");
 
-      const pdf = this.generateRegistrationPDF(formData);
+      // Cargar comités y tasa
+      const committees = await FirestoreService.getAll<Committee>("committees");
+      let rate = 180;
+      try {
+        const config = await FirestoreService.getById<RegistrationConfig>(
+          "config",
+          "registration"
+        );
+        if (config?.rate) {
+          rate = config.rate;
+        }
+      } catch (error) {
+        console.error("❌ Error cargando la tasa:", error);
+      }
+
+      const pdf = await this.generateRegistrationPDF(
+        formData,
+        committees,
+        rate
+      );
       const pdfBlob = pdf.output("blob");
 
       const fileName = `solicitud-inscripcion-${formData.userInstitution}.pdf`;
@@ -375,13 +524,13 @@ export class PDFGenerator {
       const supabaseUrl = await this.uploadPDFToSupabase(formData);
 
       console.log("Descargando PDF localmente...");
-      this.downloadPDF(formData);
+      await this.downloadPDF(formData);
 
       return supabaseUrl;
     } catch (error) {
       console.error("Error en uploadAndDownloadPDF:", error);
       console.log("Fallback: descargando solo localmente...");
-      this.downloadPDF(formData);
+      await this.downloadPDF(formData);
       throw error;
     }
   }
@@ -392,9 +541,9 @@ const PDFGeneratorButton: React.FC<PDFGeneratorProps> = ({
   formData,
   onGenerate,
 }) => {
-  const handleGeneratePDF = () => {
+  const handleGeneratePDF = async () => {
     try {
-      PDFGenerator.downloadPDF(formData);
+      await PDFGenerator.downloadPDF(formData);
       onGenerate?.();
     } catch (error) {
       console.error("Error generando PDF:", error);

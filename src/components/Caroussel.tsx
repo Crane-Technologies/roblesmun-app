@@ -466,6 +466,22 @@ const Caroussel: FC<CarousselProps> = ({
             <p>Cupos de respaldo</p>
           </label>
 
+          <button
+            type="button"
+            className="mb-4 px-4 py-2 bg-glass cursor-pointer"
+            onClick={() => {
+              setFormData!((prev) => ({
+                ...prev,
+                seatsRequested: [],
+                backupSeatsRequested: [],
+                requiresBackup: false,
+              }));
+              setErrors({});
+            }}
+          >
+            Vaciar selección de cupos
+          </button>
+
           {errors.seatsRequested && (
             <div className="bg-red-500/20 border border-red-500 text-red-200 px-4 py-2 rounded mb-4 text-center">
               {errors.seatsRequested}
@@ -526,7 +542,7 @@ const Caroussel: FC<CarousselProps> = ({
                     <img
                       src={committee.img}
                       alt={committee.name}
-                      className="w-full h-48 object-contain mb-2"
+                      className="w-full h-32 object-contain mb-2"
                       onError={(e) => {
                         (e.target as HTMLImageElement).src =
                           "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTEyIDJMMTMuMDkgOC4yNkwyMCA9TDEzLjA5IDE1Ljc0TDEyIDIyTDEwLjkxIDE1Ljc0TDQgOUwxMC45MSA4LjI2TDEyIDJaIiBmaWxsPSIjNjY2Ii8+Cjwvc3ZnPgo=";
@@ -1090,7 +1106,7 @@ const Caroussel: FC<CarousselProps> = ({
           <div className="mt-6">
             <button
               onClick={() => PDFGenerator.downloadPDF(formData!)}
-              className="bg-[#d53137] text-white px-6 py-3 rounded-lg hover:bg-[#b71c1c] transition-colors flex items-center gap-2 mx-auto"
+              className="bg-[#d53137] text-white px-6 py-3 rounded-lg hover:bg-[#b71c1c] transition-colors flex items-center gap-2 mx-auto cursor-pointer"
             >
               📄 Descargar Comprobante
             </button>
