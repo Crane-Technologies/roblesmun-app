@@ -1,16 +1,15 @@
 import { createClient } from "@supabase/supabase-js";
 import type { FileObject } from "@supabase/storage-js";
 
-const supabaseUrl = "https://qogwzwobubeuenmcjeao.supabase.co";
-const supabaseAnonKey =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFvZ3d6d29idWJldWVubWNqZWFvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk0OTYyNzUsImV4cCI6MjA3NTA3MjI3NX0.Tj_zOTsWpalc4blA35EdQ6C2Q0qH_GbErN0fpOR3dDM";
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 export class SupabaseStorage {
   static async uploadImage(
     file: File,
-    folder: string = "sponsors"
+    folder: string = "sponsors",
   ): Promise<string> {
     try {
       const fileExt = file.name.split(".").pop();
@@ -182,7 +181,7 @@ export class SupabaseStorage {
         "Size:",
         file.size,
         "Type:",
-        file.type
+        file.type,
       );
 
       if (!file.type.includes("pdf")) {
@@ -263,7 +262,7 @@ export class SupabaseStorage {
   }
 
   static async listPDFs(
-    folder: string = "registrations"
+    folder: string = "registrations",
   ): Promise<FileObject[]> {
     try {
       const { data, error } = await supabase.storage
@@ -283,7 +282,7 @@ export class SupabaseStorage {
 
   static getPublicImageUrl(
     fileName: string,
-    bucket: string = "general"
+    bucket: string = "general",
   ): string {
     const { data } = supabase.storage.from(bucket).getPublicUrl(fileName);
 
@@ -307,7 +306,7 @@ export class SupabaseStorage {
 
   static async uploadPressImage(
     file: File,
-    sectionBucket?: string
+    sectionBucket?: string,
   ): Promise<string> {
     try {
       const fileExt = file.name.split(".").pop();
@@ -351,7 +350,7 @@ export class SupabaseStorage {
 
   static async uploadPressVideo(
     file: File,
-    sectionBucket?: string
+    sectionBucket?: string,
   ): Promise<string> {
     try {
       const fileExt = file.name.split(".").pop()?.toLowerCase();
@@ -378,13 +377,13 @@ export class SupabaseStorage {
         throw new Error(
           `Formato no soportado: ${file.name}\nTipo detectado: ${
             file.type || "desconocido"
-          }`
+          }`,
         );
       }
 
       if (!isValidByType && isValidByExt) {
         console.warn(
-          `⚠️ Tipo MIME no detectado o incorrecto (${file.type}), pero la extensión .${fileExt} es válida. Continuando...`
+          `⚠️ Tipo MIME no detectado o incorrecto (${file.type}), pero la extensión .${fileExt} es válida. Continuando...`,
         );
       }
 
@@ -439,7 +438,7 @@ export class SupabaseStorage {
   // Generic file upload method
   static async uploadFile(
     file: File,
-    folder: string = "assignments"
+    folder: string = "assignments",
   ): Promise<string> {
     try {
       const fileExt = file.name.split(".").pop();
