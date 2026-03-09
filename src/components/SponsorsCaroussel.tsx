@@ -59,7 +59,7 @@ const SponsorsCaroussel: FC<SponsorsCarousselProps> = ({
           }}
         />
       </div>
-      <div className="flex gap-2 mt-8">
+      <div className="flex flex-wrap justify-center gap-2 mt-8 max-w-full px-2">
         {sponsors.map((_, idx) => (
           <button
             aria-label={`Go to slide ${idx + 1}`}
